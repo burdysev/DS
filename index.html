@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Староста — посещаемость</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f2f3f8;
+    color: #1c1c1e;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+    min-height: 100vh;
+  }
+  button, input { font-family: inherit; }
+
+  /* ---------- HEADER ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: linear-gradient(160deg, #6366f1 0%, #4f46e5 55%, #4338ca 100%);
+    color: #fff;
+    padding: calc(env(safe-area-inset-top) + 14px) 16px 16px;
+    border-radius: 0 0 22px 22px;
+    box-shadow: 0 6px 22px rgba(79, 70, 229, .3);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .header-top h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: .2px;
+  }
+  .header-top .sub {
+    font-size: 11.5px;
+    opacity: .8;
+  }
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,.15);
+    border-radius: 14px;
+    padding: 4px;
+  }
+  .date-nav button {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .date-nav button:active { background: rgba(255,255,255,.35); }
+  .date-nav input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+  }
+  .date-nav input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: .9;
+    cursor: pointer;
+  }
+
+  .chips { display: flex; gap: 8px; margin-top: 12px; }
+  .chip {
+    flex: 1;
+    background: rgba(255,255,255,.16);
+    border-radius: 12px;
+    padding: 7px 4px 8px;
+    text-align: center;
+  }
+  .chip b { display: block; font-size: 17px; line-height: 1.2; }
+  .chip span { font-size: 10.5px; opacity: .85; }
+
+  /* ---------- MAIN ---------- */
+  main { padding: 14px 14px calc(96px + env(safe-area-inset-bottom)); }
+  .view[hidden] { display: none; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+  .btn-ghost {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 8px;
+    border-radius: 12px;
+    border: 1px solid #e2e4ee;
+    background: #fff;
+    color: #4f46e5;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+  }
+  .btn-ghost:active { background: #eef0ff; }
+
+  /* ---------- STUDENT ROW ---------- */
+  .student {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 9px 10px 9px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(20, 20, 50, .06);
+    border-left: 4px solid transparent;
+    transition: border-color .15s;
+  }
+  .student.present { border-left-color: #22c55e; }
+  .student.absent  { border-left-color: #ef4444; }
+
+  .num {
+    font-size: 12px;
+    color: #b0b3c4;
+    width: 18px;
+    flex: none;
+    text-align: center;
+  }
+  .name {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .marks { display: flex; gap: 6px; flex: none; }
+  .mark-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1.5px solid #e6e8f0;
+    background: #fafbff;
+    color: #c3c6d4;
+    font-size: 17px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform .12s, background .15s, border-color .15s, color .15s;
+    touch-action: manipulation;
+  }
+  .mark-btn:active { transform: scale(.9); }
+  .mark-btn.present.active { background: #22c55e; border-color: #22c55e; color: #fff; }
+  .mark-btn.absent.active  { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+  /* ---------- EMPTY ---------- */
+  .empty {
+    text-align: center;
+    color: #9a9db1;
+    padding: 48px 20px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .empty span { font-size: 13px; opacity: .8; }
+
+  /* ---------- ADD FORM ---------- */
+  .add-form { display: flex; gap: 8px; margin-bottom: 14px; }
+  .add-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1.5px solid #e2e4ee;
+    background: #fff;
+    font-size: 15px;
+    outline: none;
+    color: #1c1c1e;
+  }
+  .add-form input:focus { border-color: #6366f1; }
+  .add-form button {
+    width: 52px;
+    flex: none;
+    border-radius: 12px;
+    border: 0;
+    background: #4f46e5;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .add-form button:active { background: #4338ca; }
+
+  /* ---------- MANAGE LIST ---------- */
+  .manage-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 10px 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(20, 20, 50, .06);
+  }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 10px;
+    border: 0;
+    background: #f2f3f8;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:active { background: #e6e8f0; }
+
+  .io-row { display: flex; gap: 8px; margin-top: 18px; }
+
+  /* ---------- STATS ---------- */
+  .stat-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(20, 20, 50, .06);
+  }
+  .stat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .stat-top .name { font-size: 14.5px; font-weight: 500; }
+  .stat-top .pct { font-size: 15px; font-weight: 700; color: #4f46e5; flex: none; }
+  .bar { height: 7px; background: #eef0f7; border-radius: 99px; overflow: hidden; }
+  .bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #6366f1, #22c55e);
+    transition: width .35s ease;
+  }
+  .stat-sub {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #9a9db1;
+    margin-top: 7px;
+  }
+
+  /* ---------- BOTTOM NAV ---------- */
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    background: rgba(255,255,255,.97);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid #e6e8f0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bottom-nav button {
+    flex: 1;
+    border: 0;
+    background: none;
+    padding: 9px 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #9a9db1;
+    cursor: pointer;
+  }
+  .bottom-nav button svg { display: block; }
+  .bottom-nav button.active { color: #4f46e5; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>Староста</h1>
+    <div class="sub" id="headerSub">посещаемость</div>
+  </div>
+
+  <div class="date-nav">
+    <button id="prevDay" aria-label="Предыдущий день">‹</button>
+    <input type="date" id="datePicker">
+    <button id="nextDay" aria-label="Следующий день">›</button>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><b id="statPresent">0</b><span>было</span></div>
+    <div class="chip"><b id="statAbsent">0</b><span>нет</span></div>
+    <div class="chip"><b id="statUnmarked">0</b><span>не отмечено</span></div>
+  </div>
+</header>
+
+<main>
+  <!-- ОТМЕТКА -->
+  <section class="view" id="view-list">
+    <div class="toolbar">
+      <button class="btn-ghost" id="markAllBtn">✓ Отметить всех</button>
+      <button class="btn-ghost" id="clearDayBtn">Сбросить день</button>
+    </div>
+    <div id="studentList"></div>
+  </section>
+
+  <!-- СТУДЕНТЫ -->
+  <section class="view" id="view-students" hidden>
+    <form class="add-form" id="addForm" autocomplete="off">
+      <input id="newName" type="text" placeholder="ФИО студента" maxlength="60">
+      <button type="submit" aria-label="Добавить">+</button>
+    </form>
+    <div id="manageList"></div>
+    <div class="io-row">
+      <button class="btn-ghost" id="exportBtn">⬇ Экспорт</button>
+      <label class="btn-ghost" for="importInput">⬆ Импорт</label>
+      <input type="file" id="importInput" accept="application/json,.json" hidden>
+    </div>
+  </section>
+
+  <!-- СТАТИСТИКА -->
+  <section class="view" id="view-stats" hidden>
+    <div id="statsList"></div>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <button data-tab="list" class="active">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11l3 3L22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+    Отметка
+  </button>
+  <button data-tab="students">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    Студенты
+  </button>
+  <button data-tab="stats">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/>
+      <line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6"  y1="20" x2="6"  y2="14"/>
+    </svg>
+    Статистика
+  </button>
+</nav>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'starosta.data.v1';
+  const $ = (sel) => document.querySelector(sel);
+
+  /* ================= СОСТОЯНИЕ ================= */
+  let state = { students: [], attendance: {} };
+  let currentDate = todayStr();
+
+  /* ================= УТИЛИТЫ ================= */
+  function fmtDate(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+  function todayStr() { return fmtDate(new Date()); }
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+  function buzz(ms) {
+    if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} }
+  }
+
+  /* ================= ХРАНИЛИЩЕ ================= */
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      alert('Не удалось сохранить данные (хранилище переполнено или недоступно)');
+    }
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p && Array.isArray(p.students)) state.students = p.students;
+      if (p && p.attendance && typeof p.attendance === 'object') {
+        state.attendance = p.attendance;
+      }
+    } catch (e) {
+      console.warn('Ошибка чтения данных', e);
+    }
+  }
+
+  /* ================= ДАННЫЕ ДНЯ ================= */
+  function dayRecord() {
+    return state.attendance[currentDate] || {};
+  }
+
+  /* ================= ОТРИСОВКА ================= */
+  function render() {
+    renderChips();
+    renderList();
+    renderManage();
+    renderStats();
+  }
+
+  function renderChips() {
+    const rec = dayRecord();
+    let p = 0, a = 0, u = 0;
+    for (const s of state.students) {
+      const m = rec[s.id];
+      if (m === 'present') p++;
+      else if (m === 'absent') a++;
+      else u++;
+    }
+    $('#statPresent').textContent = p;
+    $('#statAbsent').textContent = a;
+    $('#statUnmarked').textContent = u;
+
+    $('#headerSub').textContent = state.students.length
+      ? state.students.length + ' студентов'
+      : 'посещаемость';
+  }
+
+  function renderList() {
+    const el = $('#studentList');
+    const rec = dayRecord();
+
+    if (!state.students.length) {
+      el.innerHTML =
+        '<div class="empty">Список пуст<br>' +
+        '<span>Перейдите во вкладку «Студенты» и добавьте группу</span></div>';
+      return;
+    }
+
+    el.innerHTML = state.students.map((s, i) => {
+      const m = rec[s.id];
+      return '' +
+        '<div class="student ' + (m || '') + '">' +
+          '<div class="num">' + (i + 1) + '</div>' +
+          '<div class="name">' + esc(s.name) + '</div>' +
+          '<div class="marks">' +
+            '<button class="mark-btn absent ' + (m === 'absent' ? 'active' : '') + '" ' +
+              'data-id="' + s.id + '" data-mark="absent" aria-label="Отсутствует">✕</button>' +
+            '<button class="mark-btn present ' + (m === 'present' ? 'active' : '') + '" ' +
+              'data-id="' + s.id + '" data-mark="present" aria-label="Присутствует">✓</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderManage() {
+    const el = $('#manageList');
+    if (!state.students.length) {
+      el.innerHTML =
+        '<div class="empty">Пока никого нет<br>' +
+        '<span>Введите ФИО и нажмите «+»</span></div>';
+      return;
+    }
+    el.innerHTML = state.students.map((s, i) => '' +
+      '<div class="manage-item">' +
+        '<div class="num">' + (i + 1) + '</div>' +
+        '<div class="name">' + esc(s.name) + '</div>' +
+        '<button class="icon-btn" data-action="edit" data-id="' + s.id + '" aria-label="Переименовать">✏️</button>' +
+        '<button class="icon-btn" data-action="del" data-id="' + s.id + '" aria-label="Удалить">🗑️</button>' +
+      '</div>'
+    ).join('');
+  }
+
+  function renderStats() {
+    const el = $('#statsList');
+    if (!state.students.length) {
+      el.innerHTML = '<div class="empty">Нет данных<br><span>Добавьте студентов</span></div>';
+      return;
+    }
+
+    const rows = state.students.map((s) => {
+      let p = 0, a = 0;
+      for (const d in state.attendance) {
+        const v = state.attendance[d][s.id];
+        if (v === 'present') p++;
+        else if (v === 'absent') a++;
+      }
+      const t = p + a;
+      return { name: s.name, p: p, a: a, t: t, pct: t ? Math.round(p / t * 100) : 0 };
+    }).sort((x, y) => (y.pct - x.pct) || x.name.localeCompare(y.name, 'ru'));
+
+    el.innerHTML = rows.map((r) => '' +
+      '<div class="stat-card">' +
+        '<div class="stat-top">' +
+          '<div class="name">' + esc(r.name) + '</div>' +
+          '<div class="pct">' + (r.t ? r.pct + '%' : '—') + '</div>' +
+        '</div>' +
+        '<div class="bar"><i style="width:' + r.pct + '%"></i></div>' +
+        '<div class="stat-sub">' +
+          '<span>Был: ' + r.p + '</span>' +
+          '<span>Нет: ' + r.a + '</span>' +
+          '<span>Всего: ' + r.t + '</span>' +
+        '</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  /* ================= ДЕЙСТВИЯ ================= */
+  function toggleMark(id, mark) {
+    const rec = state.attendance[currentDate] || (state.attendance[currentDate] = {});
+    if (rec[id] === mark) {
+      delete rec[id];
+    } else {
+      rec[id] = mark;
+    }
+    if (!Object.keys(rec).length) delete state.attendance[currentDate];
+
+    buzz(12);
+    save();
+    render();
+  }
+
+  function markAllPresent() {
+    if (!state.students.length) return;
+    const rec = state.attendance[currentDate] || (state.attendance[currentDate] = {});
+    state.students.forEach((s) => { rec[s.id] = 'present'; });
+    buzz(20);
+    save();
+    render();
+  }
+
+  function clearDay() {
+    if (!state.attendance[currentDate]) return;
+    if (!confirm('Сбросить все отметки за выбранный день?')) return;
+    delete state.attendance[currentDate];
+    save();
+    render();
+  }
+
+  function addStudent(name) {
+    name = name.trim().replace(/\s+/g, ' ');
+    if (!name) return;
+    state.students.push({ id: uid(), name: name });
+    save();
+    render();
+  }
+
+  function renameStudent(id) {
+    const s = state.students.find((x) => x.id === id);
+    if (!s) return;
+    const val = prompt('Изменить ФИО:', s.name);
+    if (val === null) return;
+    const clean = val.trim().replace(/\s+/g, ' ');
+    if (!clean) return;
+    s.name = clean;
+    save();
+    render();
+  }
+
+  function deleteStudent(id) {
+    const s = state.students.find((x) => x.id === id);
+    if (!s) return;
+    if (!confirm('Удалить «' + s.name + '» из списка?')) return;
+
+    state.students = state.students.filter((x) => x.id !== id);
+    for (const d in state.attendance) {
+      delete state.attendance[d][id];
+      if (!Object.keys(state.attendance[d]).length) delete state.attendance[d];
+    }
+    save();
+    render();
+  }
+
+  function shiftDate(days) {
+    const d = new Date(currentDate + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    currentDate = fmtDate(d);
+    $('#datePicker').value = currentDate;
+    render();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.view').forEach((v) => {
+      v.hidden = (v.id !== 'view-' + tab);
+    });
+    document.querySelectorAll('.bottom-nav button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  }
+
+  /* ================= ЭКСПОРТ / ИМПОРТ ================= */
+  function exportData() {
+    try {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'starosta-' + todayStr() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) {
+      alert('Экспорт не удался');
+    }
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.students)) throw new Error('bad format');
+        if (!confirm('Заменить текущие данные импортированными?')) return;
+
+        state.students = data.students.map((s) => ({
+          id: s.id || uid(),
+          name: String(s.name || 'Без имени')
+        }));
+        state.attendance = (data.attendance && typeof data.attendance === 'object')
+          ? data.attendance : {};
+
+        save();
+        render();
+        alert('Импортировано студентов: ' + state.students.length);
+      } catch (e) {
+        alert('Некорректный файл');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ================= СОБЫТИЯ ================= */
+  function bindEvents() {
+    $('#prevDay').addEventListener('click', () => shiftDate(-1));
+    $('#nextDay').addEventListener('click', () => shiftDate(1));
+
+    $('#datePicker').addEventListener('change', (e) => {
+      if (!e.target.value) { e.target.value = currentDate; return; }
+      currentDate = e.target.value;
+      render();
+    });
+
+    $('#studentList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.mark-btn');
+      if (!btn) return;
+      toggleMark(btn.dataset.id, btn.dataset.mark);
+    });
+
+    $('#manageList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'del') deleteStudent(btn.dataset.id);
+      if (btn.dataset.action === 'edit') renameStudent(btn.dataset.id);
+    });
+
+    $('#addForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('#newName');
+      addStudent(input.value);
+      input.value = '';
+      input.focus();
+    });
+
+    $('#markAllBtn').addEventListener('click', markAllPresent);
+    $('#clearDayBtn').addEventListener('click', clearDay);
+
+    $('#exportBtn').addEventListener('click', exportData);
+    $('#importInput').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) importData(file);
+      e.target.value = '';
+    });
+
+    document.querySelectorAll('.bottom-nav button').forEach((b) => {
+      b.addEventListener('click', () => switchTab(b.dataset.tab));
+    });
+  }
+
+  /* ================= СТАРТ ================= */
+  function init() {
+    load();
+    $('#datePicker').value = currentDate;
+    bindEvents();
+    render();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
